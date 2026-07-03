@@ -7,7 +7,7 @@
 #include <sys/socket.h>
 
 
-SEC("cgroup/sock_create");
+SEC("cgroup/sock_create")
 int mark_socket(struct bpf_sock *ctx) {
     if (ctx->family != AF_INET && ctx->family != AF_INET6) {
         return 1;
