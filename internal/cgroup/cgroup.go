@@ -5,16 +5,11 @@ import (
 	"os"
 )
 
-type Proc struct {
-	name string
-	pid  int64
-}
-
-var DIR_PROCS []Proc
-
-func SetupCgroup() error {
-	err := os.MkdirAll("/sys/fs/cgroup/ppr/direct", 0755)
-	if err != nil {
+func SetupCgroup(procs map[int]bool) error {
+	if err := os.MkdirAll("/sys/fs/cgroup/ppr/direct", 0755); err != nil {
+		return err
+	}
+	if err := os.MkdirAll("/sys/fs/cgroup/ppr/default", 0755); err != nil {
 		return err
 	}
 	fs, err := os.OpenFile("/sys/fs/cgroup/ppr/direct/cgroup.procs", os.O_WRONLY, 0)
@@ -23,8 +18,10 @@ func SetupCgroup() error {
 	}
 	defer fs.Close()
 
-	for _, proc := range DIR_PROCS {
-		fmt.Fprintf(fs, "%d\n", proc.pid)
+	for pid := range procs {
+		if _, err := fmt.Fprintf(fs, "%d\n", pid); err != nil {
+			return fmt.Errorf("Cant add pid %d: %w", pid, err)
+		}
 	}
 
 	return nil

@@ -10,14 +10,13 @@ import (
 )
 
 func main() {
-	err := routing.SetupRouting()
-	if err != nil {
+	if err := routing.SetupRouting(); err != nil {
 		log.Fatal("Fail to setup routing tables and policy rules:", err)
 		os.Exit(1)
 	}
 
-	err = cgroup.SetupCgroup()
-	if err != nil {
+	procs := make(map[int]bool)
+	if err := cgroup.SetupCgroup(procs); err != nil {
 		log.Fatal("Fail to setup cgroup:", err)
 		os.Exit(1)
 	}
