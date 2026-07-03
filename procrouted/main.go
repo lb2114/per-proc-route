@@ -5,16 +5,23 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"os"
 
 	"github.com/cilium/ebpf"
 	"github.com/cilium/ebpf/link"
+	"github.com/vishvananda/netlink"
 )
 
 type Proc struct {
 	name string
 	pid  int64
 }
+
+const GW = "192.168.0.1"
+const TableID = 2114
+const InterfaceName = "wlan0"
+const Mark = 0x55
 
 var DIR_PROCS []Proc
 
@@ -54,8 +61,45 @@ func loadEBPF() (*markerObjects, link.Link, error) {
 	return &objs, lnk, nil
 }
 
+func setupRouting() error {
+	link, err := netlink.LinkByName(InterfaceName)
+	if err != nil {
+		return err
+	}
+	gw := net.ParseIP(GW)
+	newRoute := netlink.Route{
+		LinkIndex: link.Attrs().Index,
+		Gw:        gw,
+		Table:     TableID,
+	}
+	err = netlink.RouteReplace(&newRoute)
+	if err != nil {
+		return err
+	}
+
+	newRule := netlink.NewRule()
+	newRule.Priority = 1111
+	newRule.Mark = uint32(Mark)
+	newRule.Table = TableID
+
+	// if rule already exists delete and ignore error
+	_ = netlink.RuleDel(newRule)
+	err = netlink.RuleAdd(newRule)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func main() {
-	err := setupCgroup()
+	err := setupRouting()
+	if err != nil {
+		log.Fatal("Fail to setup routing tables and policy rules:", err)
+		os.Exit(1)
+	}
+
+	err = setupCgroup()
 	if err != nil {
 		log.Fatal("Fail to setup cgroup:", err)
 		os.Exit(1)
@@ -68,12 +112,4 @@ func main() {
 	}
 	defer objs.Close()
 	defer link.Close()
-
-	//загрузка eBPF кода
-
-	// Добавление правила в routing tables (проверка на то, есть ли оно)
-
-	// Функции добавить процесс по pid, по имени, удалить по pid и по имени, вывести список (сначала будет in memory хранилище)
-
-	// Создание unix сокета, механизм ожидания команд от cli клиента (через poll мб)
 }
