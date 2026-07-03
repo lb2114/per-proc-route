@@ -1,4 +1,4 @@
-module procroute
+module github.com/lb2114/per-proc-route
 
 go 1.26.4
 
