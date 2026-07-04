@@ -7,7 +7,7 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func SetupRouting() error {
+func InitRouting() error {
 	link, err := netlink.LinkByName(config.InterfaceName)
 	if err != nil {
 		return err

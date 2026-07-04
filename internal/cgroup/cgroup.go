@@ -3,25 +3,27 @@ package cgroup
 import (
 	"fmt"
 	"os"
+
+	"github.com/lb2114/per-proc-route/internal/config"
 )
 
-func SetupCgroup(procs map[int]bool) error {
-	if err := os.MkdirAll("/sys/fs/cgroup/ppr/direct", 0755); err != nil {
+func InitCgroup() error {
+	if err := os.MkdirAll(config.Cgroup, 0755); err != nil {
 		return err
 	}
-	if err := os.MkdirAll("/sys/fs/cgroup/ppr/default", 0755); err != nil {
-		return err
-	}
-	fs, err := os.OpenFile("/sys/fs/cgroup/ppr/direct/cgroup.procs", os.O_WRONLY, 0)
+
+	return nil
+}
+
+func AddPidToCGroup(pid int) error {
+	fs, err := os.OpenFile(config.Cgroup+"/cgroup.procs", os.O_WRONLY, 0)
 	if err != nil {
 		return err
 	}
 	defer fs.Close()
 
-	for pid := range procs {
-		if _, err := fmt.Fprintf(fs, "%d\n", pid); err != nil {
-			return fmt.Errorf("Cant add pid %d: %w", pid, err)
-		}
+	if _, err := fmt.Fprintf(fs, "%d\n", pid); err != nil {
+		return fmt.Errorf("Can't add pid to cgroup: %w", err)
 	}
 
 	return nil

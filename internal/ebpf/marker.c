@@ -15,5 +15,5 @@ int mark_socket(struct bpf_sock *ctx) {
 
     ctx->mark = MARK;
 
-    return 0;
+    return 1;
 }
