@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/user"
 	"strconv"
 	"strings"
 
@@ -13,17 +14,41 @@ import (
 )
 
 func CreateListener() (net.Listener, error) {
-	if err := os.RemoveAll(config.SockAddr); err != nil {
+	g, err := user.LookupGroup(config.GroupAllowToConn)
+	if err != nil {
+		return nil, fmt.Errorf("Fail to lookup group: %w", err)
+	}
+
+	gid, err := strconv.Atoi(g.Gid)
+	if err != nil {
+		return nil, fmt.Errorf("Fail to conert gid: %w", err)
+	}
+
+	if err := os.RemoveAll(config.SockPath + config.SockName); err != nil {
 		return nil, err
 	}
 
-	os.MkdirAll("/run/ppr", 0770)
-	l, err := net.Listen("unix", config.SockAddr)
+	if err := os.MkdirAll("/run/ppr", 0770); err != nil {
+		return nil, err
+	}
+	if err := os.Chmod(config.SockPath, 0770); err != nil {
+		return nil, fmt.Errorf("Fail to update %s rights: %w", config.SockPath, err)
+	}
+	if err := os.Chown(config.SockPath, os.Getuid(), gid); err != nil {
+		return nil, fmt.Errorf("Fail to update %s ownership: %w", config.SockPath, err)
+	}
+
+	l, err := net.Listen("unix", config.SockPath+config.SockName)
 	if err != nil {
 		return nil, err
 	}
-	os.Chmod("/run/ppr", 0777)
-	os.Chmod(config.SockAddr, 0666)
+	if err = os.Chmod(config.SockPath+config.SockName, 0660); err != nil {
+		l.Close()
+		return nil, err
+	}
+	if err := os.Chown(config.SockPath+config.SockName, os.Getuid(), gid); err != nil {
+		return nil, fmt.Errorf("Fail to update %s ownership: %w", config.SockPath+config.SockName, err)
+	}
 
 	return l, nil
 }

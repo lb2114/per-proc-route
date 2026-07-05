@@ -13,7 +13,7 @@ import (
 )
 
 func sendPidToDaemon(pid int) error {
-	conn, err := net.Dial("unix", config.SockAddr)
+	conn, err := net.Dial("unix", config.SockPath+config.SockName)
 	if err != nil {
 		return err
 	}
