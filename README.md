@@ -35,10 +35,8 @@ Xray позволяет гибко настраивать правила мар�
 git clone git@github.com:lb2114/per-proc-route.git
 cd per-proc-route
 
-mkdir -p bin
-go build -o bin/ppr ./ppr
-go build -o bin/pprd ./pprd
-```
+mkdir bin
+go build ./...
 
 После сборки получаем два исполняемых файла:
 
@@ -51,7 +49,7 @@ go build -o bin/pprd ./pprd
 использовать CLI-клиент:
 
 ```bash
-sudo groupadd --system ppr
+sudo groupadd ppr
 sudo usermod -aG ppr "$USER"
 ```
 
@@ -61,29 +59,27 @@ sudo usermod -aG ppr "$USER"
 Для ручного запуска демона:
 
 ```bash
-sudo ./bin/pprd
+sudo bin/pprd
 ```
 
 После этого приложение можно запустить через CLI-клиент:
 
 ```bash
-./bin/ppr run <cmd> [arguments]
+bin/ppr run <cmd> [arguments]
 ```
 
 Например:
 
 ```bash
-./bin/ppr run curl https://example.com
+bin/ppr run curl https://example.com
 ```
 
 ## Systemd
 
-Для `pprd` можно создать `systemd`-unit, чтобы демон запускался автоматически.
-
-Сначала установите бинарный файл в системный каталог:
+Можно создать systemd unit, чтобы демон запускался автоматически.
 
 ```bash
-sudo install -m 0755 bin/pprd /usr/local/bin/pprd
+sudo cp bin/pprd /usr/local/bin/pprd
 ```
 
 Затем создайте файл `/etc/systemd/system/pprd.service`:
@@ -91,8 +87,6 @@ sudo install -m 0755 bin/pprd /usr/local/bin/pprd
 ```ini
 [Unit]
 Description=per-proc-route daemon
-After=network-online.target
-Wants=network-online.target
 
 [Service]
 Type=simple
@@ -104,7 +98,7 @@ RestartSec=2s
 WantedBy=multi-user.target
 ```
 
-После этого перечитайте конфигурацию `systemd` и запустите сервис:
+Запустите сервис:
 
 ```bash
 sudo systemctl daemon-reload
@@ -118,14 +112,13 @@ sudo systemctl enable --now pprd.service
 `BPF_CGROUP_INET_SOCK_CREATE` с хуком на создание сокета процессами из этой
 cgroup.
 
-Сама eBPF-программа присваивает сокету метку, а значит, эту же метку получают
-его пакеты. Для метки создаются правила маршрутизации, которые перенаправляют
+Сама eBPF-программа присваивает сокету метку и, как следствие, всем его пакетам. Для метки создаются правила маршрутизации, которые перенаправляют
 весь помеченный трафик в отдельную таблицу маршрутизации со стандартным шлюзом
 вместо TUN-интерфейса прокси-клиента.
 
 ## Текущие настройки
 
-Основные параметры заданы в `internal/config/config.go`:
+Основные параметры заданы в `internal/config/config.go` и настраиваются до компиляции:
 
 - шлюз: `192.168.0.1`
 - таблица маршрутизации: `2114`
