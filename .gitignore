@@ -25,7 +25,10 @@ go.work.sum
 .env
 
 *.txt
-
 bin/
-
 dev.md
+
+# ebpf
+marker_bpfeb.*
+marker_bpfel.*
+vmlinux.h

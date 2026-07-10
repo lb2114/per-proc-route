@@ -2,9 +2,11 @@
 
 #define MARK 0x55
 
-#include <linux/bpf.h>
+#include "vmlinux.h"
 #include <bpf/bpf_helpers.h>
-#include <sys/socket.h>
+
+#define AF_INET 2
+#define AF_INET6 11
 
 
 SEC("cgroup/sock_create")

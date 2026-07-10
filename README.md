@@ -28,21 +28,33 @@ Xray позволяет гибко настраивать правила мар�
 - ОС на базе Linux
 - Go
 - права `root` для запуска демона `pprd`
+- bpftool
+- clang
+- llvm
+- linux-headers
 
 ## Установка
-
+Клонируем репозиторий
 ```bash
 git clone git@github.com:lb2114/per-proc-route.git
 cd per-proc-route
-
+```
+Перед сборкой необходимо сделать дамп заголовков ядра и поместить их в internal/ebpf
+```bash
+bpftool btf dump file /sys/kernel/btf/vmlinux format c > internal/ebpf/vmlinux.h
+```
+```bash
+go generate
+```
+```bash
 mkdir bin
 go build ./...
-
+```
 После сборки получаем два исполняемых файла:
-
+```bash
 - `ppr` - CLI-клиент.
 - `pprd` - демон, который должен запускаться от имени `root`.
-
+```
 ## Использование
 
 Сначала нужно создать группу `ppr` и добавить туда пользователя, который будет
@@ -74,16 +86,19 @@ bin/ppr run <cmd> [arguments]
 bin/ppr run curl https://example.com
 ```
 
-## Systemd
+## Создание systemd-unit
 
 Можно создать systemd unit, чтобы демон запускался автоматически.
 
+Копируем демон в директорию, в которой лежат исполняемые файлы, доступные через PATH
 ```bash
 sudo cp bin/pprd /usr/local/bin/pprd
 ```
 
-Затем создайте файл `/etc/systemd/system/pprd.service`:
-
+Затем создаем systemd-unit
+```Bash
+sudo nano /etc/systemd/system/pprd.service
+```
 ```ini
 [Unit]
 Description=per-proc-route daemon
