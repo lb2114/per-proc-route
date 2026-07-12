@@ -11,28 +11,36 @@ import (
 )
 
 func main() {
-	if err := routing.InitRouting(); err != nil {
+	var procsPaths []string
+	var err error
+	args := os.Args
+
+	if len(args) != 3 || (len(args) > 1 && args[1] != "--config") {
+		log.Fatalf("Invalid arguments\n Use 'pprd --config [path to config file]' to run ")
+	}
+	procsPaths, err = daemon.ParseConfig(args[2])
+	if err != nil {
+		log.Fatalf("Fail to read config file %s: %v", args[1], err)
+	}
+
+	if err = routing.InitRouting(); err != nil {
 		log.Fatal("Fail to setup routing tables and policy rules: ", err)
-		os.Exit(1)
 	}
 
-	if err := cgroup.InitCgroup(); err != nil {
+	if err = cgroup.InitCgroup(); err != nil {
 		log.Fatal("Fail to setup cgroup: ", err)
-		os.Exit(1)
 	}
 
-	objs, link, err := ebpf.LoadEBPF()
+	objs, lnks, err := ebpf.InitEBPF(procsPaths)
 	if err != nil {
 		log.Fatal("Fail to load eBPF: ", err)
-		os.Exit(1)
 	}
 	defer objs.Close()
-	defer link.Close()
+	defer lnks.Close()
 
 	l, err := daemon.CreateListener()
 	if err != nil {
 		log.Fatal("Fail to create unix socket: ", err)
-		os.Exit(1)
 	}
 	defer l.Close()
 
@@ -48,6 +56,8 @@ func main() {
 			log.Println(err)
 		}
 	}()
+
+	go ebpf.UserspaceEBPF(objs, logCh)
 
 	for {
 		conn, err := l.Accept()

@@ -6,12 +6,49 @@ import (
 	"net"
 	"os"
 	"os/user"
+	"path/filepath"
 	"strconv"
 	"strings"
 
 	"github.com/lb2114/per-proc-route/internal/cgroup"
 	"github.com/lb2114/per-proc-route/internal/config"
 )
+
+func parseCmd(line string) (int, error) {
+	parts := strings.Split(line, " ")
+	if len(parts) < 2 || parts[0] != "add" {
+		return -1, fmt.Errorf("Invalid format")
+	}
+	pid, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return -1, fmt.Errorf("Invalid format")
+	}
+	if len(parts[2:]) > 0 {
+		return -1, fmt.Errorf("Invalid format")
+	}
+
+	return pid, nil
+}
+
+func ParseConfig(path string) ([]string, error) {
+	fd, err := os.OpenFile(path, os.O_RDONLY, 0)
+	if err != nil {
+		return []string{}, err
+	}
+	res := []string{}
+	scanner := bufio.NewScanner(fd)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if !filepath.IsAbs(line) {
+			return []string{}, fmt.Errorf("Config file must contain only absolute paths no longer than %d bytes (1 byte = 1 ASCII character)", config.MaxPathLen)
+		}
+		if len(line) > config.MaxPathLen {
+			return []string{}, fmt.Errorf("Config file must contain only absolute paths no longer than %d bytes (1 byte = 1 ASCII character)", config.MaxPathLen)
+		}
+		res = append(res, line)
+	}
+	return res, nil
+}
 
 func CreateListener() (net.Listener, error) {
 	g, err := user.LookupGroup(config.GroupAllowToConn)
@@ -21,7 +58,7 @@ func CreateListener() (net.Listener, error) {
 
 	gid, err := strconv.Atoi(g.Gid)
 	if err != nil {
-		return nil, fmt.Errorf("Fail to conert gid: %w", err)
+		return nil, fmt.Errorf("Fail to convert gid: %w", err)
 	}
 
 	if err := os.RemoveAll(config.SockPath + config.SockName); err != nil {
@@ -51,22 +88,6 @@ func CreateListener() (net.Listener, error) {
 	}
 
 	return l, nil
-}
-
-func parseCmd(line string) (int, error) {
-	parts := strings.Split(line, " ")
-	if len(parts) < 2 || parts[0] != "add" {
-		return -1, fmt.Errorf("Invalid format")
-	}
-	pid, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return -1, fmt.Errorf("Invalid format")
-	}
-	if len(parts[2:]) > 0 {
-		return -1, fmt.Errorf("Invalid format")
-	}
-
-	return pid, nil
 }
 
 func HandleConnection(conn net.Conn, logCh chan error) {

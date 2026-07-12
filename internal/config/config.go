@@ -8,3 +8,5 @@ const Cgroup = "/sys/fs/cgroup/ppr/direct"
 const SockPath = "/run/ppr/"
 const SockName = "pprd.sock"
 const GroupAllowToConn = "ppr"
+
+const MaxPathLen = 255
