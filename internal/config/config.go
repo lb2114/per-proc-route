@@ -10,3 +10,8 @@ const SockName = "pprd.sock"
 const GroupAllowToConn = "ppr"
 
 const MaxPathLen = 255
+
+type UserConfig struct {
+	GW            string
+	InterfaceName string
+}

@@ -15,15 +15,19 @@ func main() {
 	var err error
 	args := os.Args
 
-	if len(args) != 3 || (len(args) > 1 && args[1] != "--config") {
-		log.Fatalf("Invalid arguments\n Use 'pprd --config [path to config file]' to run ")
+	if len(args) != 3 {
+		log.Fatalf("Invalid arguments\n Use 'pprd [path to file with procs paths] [path to config file]' to run ")
 	}
-	procsPaths, err = daemon.ParseConfig(args[2])
+	procsPaths, err = daemon.ParseList(args[1])
 	if err != nil {
-		log.Fatalf("Fail to read config file %s: %v", args[1], err)
+		log.Fatalf("Fail to read file %s: %v", args[1], err)
 	}
 
-	if err = routing.InitRouting(); err != nil {
+	userConfig, err := daemon.ParseConfig(args[2])
+	if err != nil {
+		log.Fatalf("Fail to read config file %s: %v", args[2], err)
+	}
+	if err = routing.InitRouting(userConfig); err != nil {
 		log.Fatal("Fail to setup routing tables and policy rules: ", err)
 	}
 

@@ -7,12 +7,12 @@ import (
 	"github.com/vishvananda/netlink"
 )
 
-func InitRouting() error {
-	link, err := netlink.LinkByName(config.InterfaceName)
+func InitRouting(userConfig config.UserConfig) error {
+	link, err := netlink.LinkByName(userConfig.InterfaceName)
 	if err != nil {
 		return err
 	}
-	gw := net.ParseIP(config.GW)
+	gw := net.ParseIP(userConfig.GW)
 	newRoute := netlink.Route{
 		LinkIndex: link.Attrs().Index,
 		Gw:        gw,
