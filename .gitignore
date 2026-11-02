@@ -27,6 +27,7 @@ go.work.sum
 *.txt
 bin/
 dev.md
+dev/
 
 # ebpf
 marker_bpfeb.*
