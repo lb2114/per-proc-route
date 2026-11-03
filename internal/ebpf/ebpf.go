@@ -93,16 +93,22 @@ func InitEBPF(procsPaths []string) error {
 
 	err = ExecveTrace.Pin("/sys/fs/bpf/ppr_execve")
 	if (err != nil) {
+		MarkSocket.Detach()
 		return err
 	}
 
 	err = CpyProcessTrace.Pin("/sys/fs/bpf/ppr_cpy")
 	if (err != nil) {
+		MarkSocket.Detach()
+		ExecveTrace.Detach()
 		return err
 	}
 
 	err = DelProcessTrace.Pin("/sys/fs/bpf/ppr_del")
-	if (err != nil) {
+	if (err != nil) {	
+		MarkSocket.Detach()
+		ExecveTrace.Detach()
+		CpyProcessTrace.Detach()
 		return err
 	}
 
