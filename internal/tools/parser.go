@@ -10,25 +10,26 @@ import (
 	"github.com/lb2114/per-proc-route/internal/config"
 )
 
-func ParseList(path string) ([]string, error) {
+func ParseList(path string) (map[string]int, error) {
 	fd, err := os.OpenFile(path, os.O_RDONLY, 0)
 	if err != nil {
-		return []string{}, err
+		return map[string]int{}, err
 	}
-	res := []string{}
+	defer fd.Close()
+	res := map[string]int{}
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
-		if len(res) > config.MaxListRecords {
-			return []string{}, fmt.Errorf("Config file can contain only %d records", config.MaxListRecords)
+		if len(res) >= config.MaxListRecords {
+			return map[string]int{}, fmt.Errorf("process list can contain at most %d paths", config.MaxListRecords)
 		}
 		line := scanner.Text()
 		if !filepath.IsAbs(line) {
-			return []string{}, fmt.Errorf("Config file must contain only absolute paths no longer than %d bytes (1 byte = 1 ASCII character)", config.MaxPathLen)
+			return map[string]int{}, fmt.Errorf("process list must contain absolute paths no longer than %d bytes", config.MaxPathLen)
 		}
 		if len(line) > config.MaxPathLen {
-			return []string{}, fmt.Errorf("Config file must contain only absolute paths no longer than %d bytes (1 byte = 1 ASCII character)", config.MaxPathLen)
+			return map[string]int{}, fmt.Errorf("process list must contain absolute paths no longer than %d bytes", config.MaxPathLen)
 		}
-		res = append(res, line)
+		res[line] = 1
 	}
 	if err := scanner.Err(); err != nil {
 		return res, err
@@ -42,6 +43,7 @@ func ParseConfig(path string) (config.UserConfig, error) {
 	if err != nil {
 		return res, err
 	}
+	defer fd.Close()
 	data := []string{}
 	scanner := bufio.NewScanner(fd)
 	for scanner.Scan() {
@@ -52,15 +54,13 @@ func ParseConfig(path string) (config.UserConfig, error) {
 		return res, err
 	}
 	if len(data) < 2 {
-		return res, fmt.Errorf("Invalid config! Wrong configuration! File must contain the gateway address and interface name, each parameter on a new line")
+		return res, fmt.Errorf("configuration must contain a gateway address and an interface name on separate lines")
 	}
 	ip := net.ParseIP(data[0])
 	if ip == nil {
-		return res, fmt.Errorf("First line in config file must be a valid address!")
+		return res, fmt.Errorf("gateway address on the first line must be a valid IP address")
 	}
 	res.GW = data[0]
 	res.InterfaceName = data[1]
 	return res, nil
 }
-
-

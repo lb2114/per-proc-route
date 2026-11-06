@@ -5,10 +5,9 @@
 #include <bpf/bpf_tracing.h>
 #include <errno.h> // IWYU pragma: keep
 
-#define MARK 0x55
-
 #define AF_INET 2
-#define AF_INET6 11
+
+#define MARK 0x55
 
 
 char LICENSE[] SEC("license") = "GPL";
@@ -30,7 +29,7 @@ struct {
 
 SEC("cgroup/sock_create")
 int mark_socket(struct bpf_sock *ctx) {
-    if (ctx->family != AF_INET && ctx->family != AF_INET6) {
+    if (ctx->family != AF_INET) {
         return 1;
     }
 
@@ -54,7 +53,7 @@ int BPF_PROG(cpy_process_trace, struct task_struct *p, struct task_struct *c) {
         __u32 c_tgid = c->tgid;
         long r = bpf_map_update_elem((void*)&policy_map, (const void*)&c_tgid, (const void*)&i, 0);
         if (r) {
-            bpf_printk("Fail to add child tgid %u: %ld", c_tgid, r);
+            bpf_printk("Failed to add child TGID %u: %ld", c_tgid, r);
         }
     }
     return 0;
@@ -67,13 +66,14 @@ int BPF_PROG(del_process_trace, struct task_struct *task, bool group_dead) {
         __u32 tgid = task->tgid;
         long r = bpf_map_delete_elem((void*)&policy_map, &tgid);
         if (r && r != -ENOENT) {
-            bpf_printk("Failed to delte tgid %u: %lr", tgid, r);
+            bpf_printk("Failed to delete TGID %u: %ld", tgid, r);
         }
     }
     return 0;
 }
 
 
+// Record processes whose execve path matches the bypass list.
 SEC("tracepoint/syscalls/sys_enter_execve")
 int execve_trace(struct trace_event_raw_sys_enter *ctx) {
     __u8 filename[256] = {0};
@@ -88,7 +88,7 @@ int execve_trace(struct trace_event_raw_sys_enter *ctx) {
         __u8 i = 1;
         long r = bpf_map_update_elem((void*)&policy_map, (const void*)&tgid, (const void*)&i, 0);
         if (r) {
-            bpf_printk("Failed to add tgid %u: %lr", tgid, r);
+            bpf_printk("Failed to add TGID %u: %ld", tgid, r);
         }
     }
     return 0;
