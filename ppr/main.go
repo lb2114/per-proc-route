@@ -13,6 +13,7 @@ import (
 const usage = `Usage:
   ppr start <procs> <config>  Configure routing and load eBPF programs
   ppr update <procs>          Update the process path list
+  ppr stop                    Remove pinned eBPF links and maps
   ppr help                    Show this help
 `
 
@@ -60,6 +61,14 @@ func main() {
 		}
 		if err := ebpf.ReloadProcsMap(procsPaths); err != nil {
 			log.Fatal("Failed to update process path list: ", err)
+		}
+	case "stop":
+		if len(args) != 2 {
+			fmt.Fprint(os.Stderr, usage)
+			os.Exit(2)
+		}
+		if err := ebpf.RemoveOldLinks(); err != nil {
+			log.Fatal("Failed to remove pinned eBPF objects: ", err)
 		}
 	default:
 		fmt.Fprintf(os.Stderr, "Unknown command %q\n", args[1])

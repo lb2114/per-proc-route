@@ -22,15 +22,18 @@ const (
 )
 
 
-func removeOldLinks() error {
+// RemoveOldLinks removes the pinned eBPF links and maps.
+func RemoveOldLinks() error {
     for _, path := range []string{
         MARK_LINK_PATH,
         EXECVE_LINK_PATH,
         CPY_LINK_PATH,
         DEL_LINK_PATH,
+		PROCS_MAP_PATH,
+		POLICY_MAP_PATH,
     } {
         if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
-            return fmt.Errorf("remove BPF link pin %s: %w", path, err)
+            return fmt.Errorf("remove BPF pin %s: %w", path, err)
         }
     }
     return nil
@@ -39,7 +42,7 @@ func removeOldLinks() error {
 
 func InitEBPF(procsPaths map[string]int) error {
 	//remove existing pins before attaching new ones
-	err := removeOldLinks()
+	err := RemoveOldLinks()
 	if err != nil {
 		return err
 	}
